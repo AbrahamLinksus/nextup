@@ -1,0 +1,130 @@
+name: CI
+
+# Runs the same two commands that gate a local commit: the linter, and the whole
+# test suite against a real Postgres with pgvector. Real rather than mocked for
+# the same reason the tests give: the ingest CAS, the queue's partial unique
+# index, and the vector similarity floor are behaviours of PostgreSQL, and a
+# suite that mocked them would be asserting that the mock works.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # The same image docker-compose.yml uses, so a green CI run means the
+        # schema applied on the version this is actually developed against.
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: assistant
+          POSTGRES_PASSWORD: assistant
+          POSTGRES_DB: assistant
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U assistant -d assistant"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      # Locally the compose stack sits on 5434 to dodge two other Postgres
+      # instances on that machine; the runner has no such conflict, so the tests
+      # are pointed at the default port rather than the port being hardcoded.
+      TEST_ADMIN_DATABASE_URL: postgresql://assistant:assistant@localhost:5432/assistant
+      TEST_DATABASE_URL: postgresql://assistant:assistant@localhost:5432/assistant_test
+      # The db tests skip when Postgres is unreachable, which is right on a
+      # laptop and wrong here -- a silently skipped suite is a green tick over
+      # nothing. This asserts afterwards that they actually ran.
+      PYTEST_ADDOPTS: -q
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install the project
+        run: uv sync --extra dev
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Test
+        run: uv run pytest --junitxml=results.xml
+
+      - name: Confirm the database tests were not skipped
+        # The suite is designed to skip cleanly with no Postgres. That behaviour
+        # is a convenience locally and a hazard in CI, where a misconfigured
+        # service container would otherwise look identical to a passing run.
+        run: |
+          python - <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          suite = ET.parse("results.xml").getroot().find("testsuite")
+          skipped, tests = int(suite.get("skipped")), int(suite.get("tests"))
+          print(f"{tests} tests, {skipped} skipped")
+          if skipped:
+              sys.exit("database tests were skipped -- the service container is not reachable")
+          PY
+
+  migrations:
+    # A separate job because it is a different claim: not "the tests pass" but
+    # "the schema in migrations/ applies to an empty database, in order, from
+    # nothing". The test suite gets there via the same code path, but only ever
+    # on a database it just created and immediately drops.
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: assistant
+          POSTGRES_PASSWORD: assistant
+          POSTGRES_DB: assistant
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U assistant -d assistant"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      POSTGRES_PORT: 5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - run: uv python install 3.12
+      - run: uv sync --extra dev
+
+      - name: Apply migrations to an empty database
+        run: uv run assistant migrate
+
+      - name: Applying them again is a no-op
+        # Idempotence is the property that matters: the runner records what it
+        # applied, so a second run must report nothing rather than fail on a
+        # table that already exists.
+        run: |
+          output=$(uv run assistant migrate)
+          echo "$output"
+          echo "$output" | grep -q "already up to date"

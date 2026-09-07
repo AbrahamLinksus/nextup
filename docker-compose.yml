@@ -1,0 +1,32 @@
+name: assistant
+
+# Infrastructure only. The assistant itself runs on the host: it drives a local
+# Ollama, and on this machine Ollama is not containerised (no
+# nvidia-container-toolkit, so a container would be CPU-only and the embedding
+# pass would dominate every ingest).
+#
+# Port 5434 rather than 5432 or 5433: the system cluster holds 5432 and the RAG
+# knowledge-base stack holds 5433, and all three run here at once.
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: assistant-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-assistant}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-assistant}
+      POSTGRES_DB: ${POSTGRES_DB:-assistant}
+    ports:
+      - "${POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-assistant} -d ${POSTGRES_DB:-assistant}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  pgdata:

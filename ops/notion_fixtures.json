@@ -1,0 +1,218 @@
+{
+  "_comment": [
+    "A fake Notion workspace. Edit this file and re-run `assistant ingest notion`.",
+    "",
+    "Every page's last_edited_time defaults to this file's modification time, so",
+    "an edit here looks exactly like an edit in Notion: the ingest guard accepts",
+    "it, unchanged pages cost nothing (the content hash rejects them before any",
+    "model call), and a changed date reconciles onto the SAME calendar event",
+    "rather than creating a second one.",
+    "",
+    "Body shorthand, expanded into real Notion block JSON by ops/mock_notion.py:",
+    "  # / ## / ###  headings          - item        bulleted list",
+    "  1. item       numbered list     - [ ] / - [x] to-do",
+    "  > quote       quote             !! text       callout",
+    "  | a | b |     table row         ```           fenced code",
+    "  v Toggle      toggle; indent its children by two spaces"
+  ],
+  "pages": [
+    {
+      "id": "page-dbms-assessment",
+      "title": "DBMS Assessment 2",
+      "properties": {
+        "Due Date": {
+          "type": "date",
+          "value": "2026-09-11T14:00:00+05:30"
+        },
+        "Status": {
+          "type": "select",
+          "value": "Not started"
+        },
+        "Priority": {
+          "type": "select",
+          "value": "High"
+        },
+        "Course": {
+          "type": "rich_text",
+          "value": "CS3401 Database Management Systems"
+        }
+      },
+      "body": [
+        "# DBMS Assessment 2",
+        "",
+        "Assessment 2 is on **11 September 2026 at 2pm** in Lab 3. It is closed book.",
+        "",
+        "## Syllabus",
+        "",
+        "| Unit | Topic | Weight |",
+        "| --- | --- | --- |",
+        "| 4 | Normalization up to BCNF | 30% |",
+        "| 5 | Indexing and B+ trees | 30% |",
+        "| 6 | Transactions and concurrency | 40% |",
+        "",
+        "## Before the exam",
+        "",
+        "- [x] Revise normalization worked examples",
+        "- [ ] Redo the B+ tree insertion exercises",
+        "- [ ] Read the concurrency chapter summary",
+        "",
+        "!! Bring your student ID. Entry is refused without it.",
+        "",
+        "v Past paper notes",
+        "  The 2025 paper spent most of its marks on transactions.",
+        "  - Two questions on isolation levels",
+        "  - One long question on deadlock detection"
+      ]
+    },
+    {
+      "id": "page-os-notes",
+      "title": "OS revision notes - demand paging",
+      "properties": {
+        "Status": {
+          "type": "select",
+          "value": "In progress"
+        },
+        "Tags": {
+          "type": "multi_select",
+          "value": [
+            "operating-systems",
+            "revision"
+          ]
+        }
+      },
+      "body": [
+        "# Demand paging",
+        "",
+        "A page is loaded only when it is referenced, so the resident set grows to fit",
+        "the working set rather than the whole address space.",
+        "",
+        "## Page fault cost",
+        "",
+        "```",
+        "effective_access_time = (1 - p) * memory_access + p * page_fault_time",
+        "```",
+        "",
+        "With a fault rate p of 0.001 and a 8ms fault, the effective access time is",
+        "dominated entirely by the faults.",
+        "",
+        "> Thrashing is not a memory-size problem, it is a locality problem."
+      ]
+    },
+    {
+      "id": "page-networks-quiz",
+      "title": "Networks quiz - maybe",
+      "properties": {
+        "Status": {
+          "type": "select",
+          "value": "Not started"
+        },
+        "Priority": {
+          "type": "select",
+          "value": "Low"
+        }
+      },
+      "body": [
+        "# Networks quiz",
+        "",
+        "Someone said there might be a surprise quiz on routing sometime in the next",
+        "few weeks. Nothing confirmed, no date announced, not sure it is even graded.",
+        "",
+        "- Possibly covers distance vector",
+        "- Possibly covers TCP congestion control"
+      ]
+    },
+    {
+      "id": "page-fee-deadline",
+      "title": "Semester fee payment",
+      "properties": {
+        "Deadline": {
+          "type": "date",
+          "value": "2026-09-15"
+        },
+        "Status": {
+          "type": "status",
+          "value": "To do"
+        },
+        "Amount": {
+          "type": "number",
+          "value": 48500
+        }
+      },
+      "body": [
+        "# Semester 6 fee payment",
+        "",
+        "The last date for semester 6 fees is **15 September 2026**. Payment is through",
+        "the student portal only; the counter does not accept fees this term.",
+        "",
+        "1. Log in to the student portal",
+        "2. Fees -> Semester 6 -> Pay",
+        "3. Save the receipt PDF",
+        "",
+        "!! A late payment carries a 5,000 fine and blocks exam registration."
+      ]
+    },
+    {
+      "id": "page-reading-list",
+      "title": "Reading list",
+      "properties": {
+        "Status": {
+          "type": "select",
+          "value": "Ongoing"
+        }
+      },
+      "body": [
+        "# Things worth reading",
+        "",
+        "- Designing Data-Intensive Applications, chapters 5-7",
+        "- The Raft paper",
+        "- Notes on vector clocks from the distributed systems course",
+        "",
+        "No deadline on any of this. Read when there is time."
+      ]
+    },
+    {
+      "id": "page-compiler-lab",
+      "title": "Compiler design lab - submission 3",
+      "properties": {
+        "Due Date": {
+          "type": "date",
+          "value": "2026-09-19T23:59:00+05:30"
+        },
+        "Status": {
+          "type": "select",
+          "value": "In progress"
+        },
+        "Priority": {
+          "type": "select",
+          "value": "High"
+        },
+        "Course": {
+          "type": "rich_text",
+          "value": "CS3451 Compiler Design"
+        }
+      },
+      "body": [
+        "# Lab submission 3 - lexical analyser",
+        "",
+        "Submission 3 is due **19 September 2026 by 11:59pm** on the lab portal.",
+        "Late submissions lose 10% per day.",
+        "",
+        "## What to hand in",
+        "",
+        "| File | Contents |",
+        "| --- | --- |",
+        "| lexer.c | Tokeniser for the subset grammar |",
+        "| tests.txt | At least 20 test inputs |",
+        "| report.pdf | Two pages on the DFA construction |",
+        "",
+        "## Checklist",
+        "",
+        "- [x] Token table finalised",
+        "- [ ] Handle nested comments",
+        "- [ ] Write the report",
+        "",
+        "!! Submissions are through the lab portal only. Email submissions are not marked."
+      ]
+    }
+  ]
+}

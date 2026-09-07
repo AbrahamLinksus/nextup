@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jake's assistant</title>
+<style>
+  :root {
+    --bg: #fbfaf8;
+    --panel: #ffffff;
+    --line: #e6e2db;
+    --ink: #232019;
+    --muted: #7b746a;
+    --faint: #a9a196;
+    --accent: #9a5b2c;
+    --mandatory: #b4462a;
+    --optional: #a37312;
+    --informational: #5b7c6a;
+    --shadow: 0 1px 2px rgba(35,32,25,.05), 0 8px 24px -12px rgba(35,32,25,.12);
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #171614; --panel: #1e1d1a; --line: #302e2a; --ink: #ece7de;
+      --muted: #948c80; --faint: #6d665c; --accent: #d29157;
+      --mandatory: #e07a5f; --optional: #d9a441; --informational: #83ab94;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); padding: 14px 24px;
+  }
+  .bar { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 17px; margin: 0; letter-spacing: -.01em; font-weight: 640; }
+  .sub { color: var(--muted); font-size: 12.5px; font-family: var(--mono); }
+  .grow { flex: 1; }
+  main { max-width: 1180px; margin: 0 auto; padding: 22px 24px 80px; }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 22px; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; box-shadow: var(--shadow); }
+  .stat b { display: block; font-size: 22px; font-weight: 620; letter-spacing: -.02em; }
+  .stat span { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; }
+
+  nav { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 20px; overflow-x: auto; }
+  nav button {
+    background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted);
+    padding: 9px 13px; font: inherit; font-size: 14px; cursor: pointer; white-space: nowrap;
+  }
+  nav button:hover { color: var(--ink); }
+  nav button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 560; }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; box-shadow: var(--shadow); }
+  .card h3 { margin: 0 0 4px; font-size: 15px; font-weight: 580; }
+  .row { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .meta { color: var(--muted); font-size: 12.5px; font-family: var(--mono); }
+  .tag {
+    font-size: 11px; font-family: var(--mono); padding: 1.5px 7px; border-radius: 999px;
+    border: 1px solid currentColor; white-space: nowrap;
+  }
+  .t-mandatory { color: var(--mandatory); }
+  .t-optional { color: var(--optional); }
+  .t-informational { color: var(--informational); }
+  .t-plain { color: var(--faint); }
+  pre {
+    background: color-mix(in srgb, var(--ink) 4%, transparent); border: 1px solid var(--line);
+    border-radius: 7px; padding: 9px 11px; overflow-x: auto; font-family: var(--mono);
+    font-size: 12px; margin: 8px 0 0; white-space: pre-wrap; word-break: break-word;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  button.act {
+    font: inherit; font-size: 13px; padding: 5px 11px; border-radius: 7px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+  }
+  button.act:hover { border-color: var(--accent); color: var(--accent); }
+  button.act[disabled] { opacity: .45; cursor: default; }
+  button.primary { border-color: var(--accent); color: var(--accent); }
+
+  form.ask { display: flex; gap: 8px; margin-bottom: 16px; }
+  input[type=text] {
+    flex: 1; font: inherit; padding: 9px 12px; border-radius: 8px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+  }
+  input[type=text]:focus { outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: -1px; }
+
+  .empty { color: var(--muted); padding: 26px 2px; font-style: italic; }
+  .flash { color: var(--accent); font-size: 13px; font-family: var(--mono); min-height: 18px; }
+  .hits .sim { color: var(--faint); font-family: var(--mono); font-size: 12px; }
+  .timeline { border-left: 2px solid var(--line); padding-left: 14px; margin-left: 4px; }
+  .ev { padding: 7px 0; }
+  .ev .when { color: var(--faint); font-family: var(--mono); font-size: 11.5px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <h1>Jake's assistant</h1>
+    <span class="sub" id="context">connecting…</span>
+    <span class="grow"></span>
+    <button class="act" id="refresh">Refresh</button>
+    <button class="act primary" id="ingest-notion">Fetch Notion</button>
+  </div>
+</header>
+
+<main>
+  <div class="stats" id="stats"></div>
+  <div class="flash" id="flash"></div>
+
+  <nav id="tabs">
+    <button data-tab="activity" aria-selected="true">Activity</button>
+    <button data-tab="queue">Review queue</button>
+    <button data-tab="scheduled">Scheduled</button>
+    <button data-tab="items">Items</button>
+    <button data-tab="metrics">Cost</button>
+    <button data-tab="ask">Ask</button>
+  </nav>
+
+  <section id="panel"></section>
+</main>
+
+<script>
+const $ = (sel) => document.querySelector(sel);
+const panel = $("#panel");
+let tab = "activity";
+
+// The page is served unauthenticated (it carries nothing); every request it
+// makes is not. The token is asked for once on the first 401 and kept in
+// localStorage, so a dashboard left open across a restart does not re-prompt.
+const TOKEN_KEY = "assistant.api_token";
+const token = () => { try { return localStorage.getItem(TOKEN_KEY) || ""; } catch { return ""; } };
+const setToken = (value) => { try { localStorage.setItem(TOKEN_KEY, value); } catch {} };
+
+const withAuth = (options) => {
+  const merged = { ...(options || {}) };
+  const current = token();
+  if (current) merged.headers = { ...(merged.headers || {}), Authorization: `Bearer ${current}` };
+  return merged;
+};
+
+const api = async (path, options, retried) => {
+  const response = await fetch(path, withAuth(options));
+  if (response.status === 401 && !retried) {
+    const entered = window.prompt("This assistant requires an API token (API_TOKEN in .env):", "");
+    if (entered) { setToken(entered.trim()); return api(path, options, true); }
+  }
+  if (!response.ok) throw new Error((await response.json().catch(() => ({}))).detail || response.statusText);
+  return response.json();
+};
+const post = (path, body) => api(path, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(body || {}),
+});
+
+const escape = (value) => String(value ?? "").replace(/[&<>"]/g, (c) => (
+  { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]
+));
+const when = (value) => value ? new Date(value).toLocaleString(undefined, {
+  weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+}) : "—";
+const labelClass = (label) => ({
+  "actionable-mandatory": "t-mandatory",
+  "actionable-optional": "t-optional",
+  "informational": "t-informational",
+}[label] || "t-plain");
+const flash = (message) => { $("#flash").textContent = message || ""; };
+
+// -- header ---------------------------------------------------------------
+
+async function loadOverview() {
+  const data = await api("/overview");
+  const c = data.counts;
+  $("#stats").innerHTML = [
+    ["items", c.items], ["chunks embedded", c.embedded],
+    ["scheduled actions", c.actions], ["awaiting review", c.pending],
+  ].map(([name, value]) => `<div class="stat"><b>${value}</b><span>${name}</span></div>`).join("");
+
+  const fetched = data.sources.map((s) => `${s.source_type} ${s.last_fetch_at ? when(s.last_fetch_at) : "never"}`);
+  $("#context").textContent =
+    `${data.provider} · ${data.timezone} · ${data.dry_run ? "dry run" : "live calendar"} · last fetch: ${fetched.join(" | ")}`;
+}
+
+// -- tabs -----------------------------------------------------------------
+
+const views = {
+  async activity() {
+    const events = await api("/audit?limit=60");
+    if (!events.length) return `<p class="empty">Nothing has happened yet. Fetch a source to start.</p>`;
+    return `<div class="timeline">` + events.map((event) => {
+      const p = event.payload || {};
+      const detail = {
+        classification: () => `${p.label} at ${Number(p.confidence).toFixed(2)} — ${escape(p.rationale || "")}`,
+        action_taken: () => `${p.operation || "create"}: ${escape(p.summary || "")}${p.dry_run ? " (dry run)" : ""}`,
+        queued: () => `${p.reason} — ${escape(p.detail || "")}`,
+        duplicate_suppressed: () => `already covered by ${escape(p.already_covered_by)}`,
+        injection_flagged: () => `${escape(p.reason || "")} (${p.method})`,
+        extraction: () => `proposed ${p.action_type}`,
+        skipped: () => escape(p.reason || ""),
+      }[event.event_type];
+      return `<div class="ev">
+        <div class="row">
+          <span class="tag ${labelClass(p.label)}">${event.event_type}</span>
+          <strong>${escape(event.item_key)}</strong>
+          ${event.chunk_key ? `<span class="meta">${escape(event.chunk_key)}</span>` : ""}
+          <span class="grow"></span><span class="when">${when(event.created_at)}</span>
+        </div>
+        ${detail ? `<div class="meta">${detail()}</div>` : ""}
+      </div>`;
+    }).join("") + `</div>`;
+  },
+
+  async queue() {
+    const entries = await api("/queue?limit=50");
+    if (!entries.length) return `<p class="empty">The review queue is empty — nothing is waiting on you.</p>`;
+    return entries.map((entry) => {
+      const spec = entry.drafted_action;
+      const fields = spec ? Object.entries(spec.fields).map(
+        ([name, f]) => `${name} = ${JSON.stringify(f.value)}  (confidence ${Number(f.confidence).toFixed(2)})`
+      ).join("\n") : null;
+      return `<div class="card" data-entry="${entry.entry_id}">
+        <div class="row">
+          <span class="tag ${labelClass(entry.label)}">${entry.label}</span>
+          <span class="tag t-plain">${entry.queued_because}</span>
+          <strong>${escape(entry.item)}</strong>
+          <span class="grow"></span>
+          <span class="meta">${when(entry.created_at)}</span>
+        </div>
+        <div class="meta">${escape(entry.chunk || "whole item")} · classified at ${Number(entry.confidence).toFixed(2)}</div>
+        ${fields ? `<pre>${escape(spec.action_type)}\n${escape(fields)}</pre>` : `<div class="meta">No drafted action — nothing in the registry fitted it.</div>`}
+        <div class="row" style="margin-top:10px">
+          <button class="act primary" data-promote="${entry.entry_id}" ${spec ? "" : "disabled"}>Approve</button>
+          <button class="act" data-dismiss="${entry.entry_id}">Dismiss</button>
+        </div>
+      </div>`;
+    }).join("");
+  },
+
+  async scheduled() {
+    const rows = await api("/upcoming?days=120");
+    if (!rows.length) return `<p class="empty">Nothing is scheduled in the next 120 days.</p>`;
+    return rows.map((row) => `<div class="card">
+      <div class="row">
+        <strong>${escape(row.title || row.item_key)}</strong>
+        <span class="grow"></span>
+        <span class="tag t-plain">${escape(row.action_id)}</span>
+      </div>
+      <div class="meta">${when(row.when)} · from ${escape(row.chunk_key)}
+        ${row.url ? ` · <a href="${escape(row.url)}" target="_blank" rel="noreferrer">source</a>` : ""}</div>
+    </div>`).join("");
+  },
+
+  async items() {
+    const rows = await api("/items?limit=60");
+    if (!rows.length) return `<p class="empty">Nothing ingested yet.</p>`;
+    return rows.map((row) => `<div class="card">
+      <div class="row">
+        <span class="tag ${labelClass(row.label)}">${row.label || "unclassified"}</span>
+        <strong>${escape(row.title)}</strong>
+        <span class="grow"></span>
+        <span class="meta">${when(row.last_edited_at)}</span>
+      </div>
+      <div class="meta">
+        ${row.source_type}${row.trust_level === "untrusted" ? " · untrusted" : ""} ·
+        ${row.chunks} chunk${row.chunks === 1 ? "" : "s"} ·
+        ${row.actions} action${row.actions === 1 ? "" : "s"}
+        ${row.deadline ? ` · deadline ${when(row.deadline)}` : ""}
+        ${row.status ? ` · ${escape(row.status)}` : ""}
+        ${row.urgency_hint ? ` · ${escape(row.urgency_hint)}` : ""}
+        ${row.url ? ` · <a href="${escape(row.url)}" target="_blank" rel="noreferrer">open</a>` : ""}
+      </div>
+    </div>`).join("");
+  },
+
+  async metrics() {
+    const data = await api("/metrics?days=7");
+    const t = data.window.totals;
+    if (!t.items) return `<p class="empty">Nothing processed in the last 7 days.</p>`;
+
+    const secs = (ms) => `${(Number(ms) / 1000).toFixed(1)}s`;
+    const stat = (label, value, note) =>
+      `<div class="card" style="flex:1;min-width:150px">
+         <div class="meta">${label}</div>
+         <div style="font-size:22px;font-weight:600;margin-top:2px">${value}</div>
+         ${note ? `<div class="meta">${note}</div>` : ""}
+       </div>`;
+
+    const gate = data.live.counters.gate_decisions || {};
+    const gateRows = Object.entries(gate)
+      .map(([labels, count]) => `<div class="meta">${escape(labels)} — ${count}</div>`)
+      .join("") || `<div class="meta">no decisions this process</div>`;
+
+    return `
+      <div class="row" style="gap:10px;flex-wrap:wrap;align-items:stretch">
+        ${stat("items (7d)", t.items, `${t.llm_calls} model calls`)}
+        ${stat("per item", secs(t.p50_ms), `p95 ${secs(t.p95_ms)} · max ${secs(t.max_ms)}`)}
+        ${stat("model wait", `${t.model_wait_pct}%`, "of wall clock (reasoning only)")}
+        ${stat("tokens", `${Number(t.input_tokens).toLocaleString()} in`, `${Number(t.output_tokens).toLocaleString()} out`)}
+      </div>
+      <div class="card">
+        <div class="meta">where the time goes (mean per stage)</div>
+        <pre>${data.window.stages.map((s) => `${s.stage.padEnd(18)} ${secs(s.mean_ms).padStart(7)}   n=${s.samples}`).join("\n")}</pre>
+      </div>
+      <div class="card">
+        <div class="meta">outcomes</div>
+        <pre>${data.window.by_outcome.map((o) => `${o.outcome.padEnd(10)} ${String(o.items).padStart(5)}   mean ${secs(o.mean_ms)}`).join("\n")}</pre>
+      </div>
+      <div class="card">
+        <div class="meta">gate decisions, this process</div>
+        ${gateRows}
+      </div>`;
+  },
+
+  async ask() {
+    return `
+      <form class="ask" id="ask-form">
+        <input type="text" id="ask-input" placeholder="What's due this week?" autocomplete="off">
+        <button class="act primary" type="submit">Ask</button>
+        <button class="act" type="button" id="search-instead">Search only</button>
+      </form>
+      <div id="answer"></div>`;
+  },
+};
+
+async function render() {
+  panel.innerHTML = `<p class="empty">Loading…</p>`;
+  try {
+    panel.innerHTML = await views[tab]();
+  } catch (error) {
+    panel.innerHTML = `<p class="empty">Could not load: ${escape(error.message)}</p>`;
+  }
+  if (tab === "ask") wireAsk();
+}
+
+// -- ask / search ---------------------------------------------------------
+
+function wireAsk() {
+  const form = $("#ask-form");
+  const input = $("#ask-input");
+  const answer = $("#answer");
+
+  const run = async (mode) => {
+    const query = input.value.trim();
+    if (!query) return;
+    answer.innerHTML = `<p class="empty">${mode === "ask" ? "Thinking (the model runs locally, give it a moment)…" : "Searching…"}</p>`;
+    try {
+      if (mode === "ask") {
+        const data = await post("/ask", { message: query });
+        answer.innerHTML = `<div class="card">
+          <div class="meta">${data.tools_used.length ? "tools used: " + data.tools_used.join(", ") : "answered without tools"}</div>
+          <p style="white-space:pre-wrap;margin:8px 0 0">${escape(data.answer)}</p>
+        </div>`;
+      } else {
+        const data = await post("/search", { query });
+        answer.innerHTML = data.hits.length ? `<div class="hits">` + data.hits.map((hit) => `
+          <div class="card">
+            <div class="row">
+              <strong>${escape(hit.title)}</strong>
+              <span class="grow"></span>
+              <span class="sim">${hit.similarity.toFixed(3)}</span>
+            </div>
+            <pre>${escape(hit.content)}</pre>
+          </div>`).join("") + `</div>`
+          : `<p class="empty">Nothing indexed matched above the relevance floor. That is a real answer, not an error.</p>`;
+      }
+    } catch (error) {
+      answer.innerHTML = `<p class="empty">Failed: ${escape(error.message)}</p>`;
+    }
+  };
+
+  form.addEventListener("submit", (event) => { event.preventDefault(); run("ask"); });
+  $("#search-instead").addEventListener("click", () => run("search"));
+  input.focus();
+}
+
+// -- actions --------------------------------------------------------------
+
+panel.addEventListener("click", async (event) => {
+  const promote = event.target.closest("[data-promote]");
+  const dismiss = event.target.closest("[data-dismiss]");
+  if (!promote && !dismiss) return;
+
+  const button = promote || dismiss;
+  button.disabled = true;
+  flash(promote ? "Executing the drafted action…" : "Dismissing…");
+  try {
+    if (promote) {
+      const data = await post(`/queue/${promote.dataset.promote}/promote`, {});
+      flash(data.result);
+    } else {
+      await post(`/queue/${dismiss.dataset.dismiss}/dismiss`, {});
+      flash("Dismissed. Recorded for threshold calibration.");
+    }
+    await Promise.all([loadOverview(), render()]);
+  } catch (error) {
+    flash(`Failed: ${error.message}`);
+    button.disabled = false;
+  }
+});
+
+$("#tabs").addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-tab]");
+  if (!button) return;
+  tab = button.dataset.tab;
+  for (const other of $("#tabs").children) other.setAttribute("aria-selected", String(other === button));
+  render();
+});
+
+$("#refresh").addEventListener("click", () => { flash(""); loadOverview(); render(); });
+
+$("#ingest-notion").addEventListener("click", async (event) => {
+  event.target.disabled = true;
+  flash("Fetching Notion and running everything new through triage…");
+  try {
+    const summary = await post("/ingest/notion", {});
+    flash(`${summary.fetched} fetched · ${summary.processed} processed · ${summary.actions_taken.length} acted on · ${summary.queued.length} queued`);
+    await Promise.all([loadOverview(), render()]);
+  } catch (error) {
+    flash(`Ingest failed: ${error.message}`);
+  }
+  event.target.disabled = false;
+});
+
+loadOverview().catch((error) => { $("#context").textContent = `API unreachable: ${error.message}`; });
+render();
+</script>
+</body>
+</html>
